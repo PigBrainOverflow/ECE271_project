@@ -16,7 +16,7 @@ def optimize(
     """
     device = "cpu" if not torch.cuda.is_available() else device
     X: torch.Tensor = torch.tensor(X, dtype=torch.float64, device=device)
-    A: torch.Tensor = torch.randn(C.shape[0], X.shape[0], dtype=torch.float64, device=device)
+    A: torch.Tensor = torch.randn(C.shape[0], X.shape[0], dtype=torch.float64, requires_grad=True, device=device)
     C: torch.Tensor = torch.tensor(C, dtype=torch.float64, device=device)
 
     optimizer = torch.optim.Adam([A], lr=lr)
