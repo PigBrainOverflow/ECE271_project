@@ -21,10 +21,11 @@ def optimize(
 
     optimizer = torch.optim.Adam([A], lr=lr)
 
-    for _ in range(max_iter):
+    for i in range(max_iter):
         optimizer.zero_grad()
         loss = torch.norm(C - A @ A.T @ X, p="fro")**2 + l * torch.sum(torch.norm(A, p=1, dim=1))
         loss.backward()
+        print(f"Iteration {i + 1}, Loss: {loss.item()}")
         optimizer.step()
 
     return A.detach().numpy()
