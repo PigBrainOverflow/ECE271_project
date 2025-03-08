@@ -32,4 +32,4 @@ def optimize(
         print(f"Iteration {i + 1}, Loss: {loss.item()}")
         optimizer.step()
 
-    return A.detach().numpy()
+    return A.detach().cpu().numpy()
