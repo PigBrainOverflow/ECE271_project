@@ -44,35 +44,35 @@ def optimize_sparse(
     device: str = "cuda"
 ) -> np.ndarray:
     """
-    minimize ||C - AX||_F^2 + l||A||_1
-    A
+    minimize ||C - WX||_F^2 + l||A||_1
+    W
     """
     device = "cpu" if not torch.cuda.is_available() else device
     X: torch.Tensor = torch.tensor(X, dtype=torch.float64, device=device)
-    A: torch.Tensor = torch.randn(C.shape[0], X.shape[0], dtype=torch.float64, requires_grad=True, device=device)
+    W: torch.Tensor = torch.randn(C.shape[0], X.shape[0], dtype=torch.float64, requires_grad=True, device=device)
     C: torch.Tensor = torch.tensor(C, dtype=torch.float64, device=device)
 
-    optimizer = torch.optim.Adam([A], lr=lr)
+    optimizer = torch.optim.Adam([W], lr=lr)
 
     for i in range(max_iter):
         optimizer.zero_grad()
-        loss = torch.norm(C - A @ X, p="fro")**2 + l * torch.sum(torch.norm(A, p=1, dim=1))
+        loss = torch.norm(C - W @ X, p="fro")**2 + l * torch.sum(torch.norm(W, p=1, dim=1))
         loss.backward()
-        print(f"Iteration {i + 1}, Loss: {loss.item()}")
         optimizer.step()
 
-    return A.detach().cpu().numpy()
+    return W.detach().cpu().numpy()
 
 
 def select_features(
     A: np.ndarray,
-    k: int
+    k: int,
+    axis: int = 0
 ) -> np.ndarray:
     """
     Select top k features (rows) from A and make the rest zero.
     """
     A = A.copy()
-    top_k_indices = np.argsort(np.linalg.norm(A, ord=2, axis=0))[-k:]
+    top_k_indices = np.argsort(np.linalg.norm(A, ord=2, axis=axis))[-k:]
     mask = np.zeros_like(A)
     mask[:, top_k_indices] = 1
     A = A * mask
