@@ -69,6 +69,51 @@ def select_features(
     k: int
 ) -> np.ndarray:
     """
-    Select top k features from A
+    Select top k features (rows) from A and make the rest zero.
     """
-    return A[np.argsort(np.linalg.norm(A, axis=1))[-k:]]
+    A = A.copy()
+    top_k_indices = np.argsort(np.linalg.norm(A, ord=2, axis=0))[-k:]
+    mask = np.zeros_like(A)
+    mask[:, top_k_indices] = 1
+    A = A * mask
+    return A
+
+
+def optimize_autoencoder(
+    X: np.ndarray,
+    Y: np.ndarray,
+    We: np.ndarray | None = None,
+    Wd: np.ndarray | None = None,
+    n: int = 100,   # number of features
+    l: float = 0.1,
+    lr: float = 1e-3,
+    max_iter: int = 100,
+    device: str = "cuda",
+    verbose: bool = False
+) -> tuple[np.ndarray, np.ndarray]:
+    """
+    minimize ||Y - Wd * We * X||_F^2 + l||We||_1
+    """
+    device = "cpu" if not torch.cuda.is_available() else device
+    X: torch.Tensor = torch.tensor(X, dtype=torch.float64, device=device)
+    Y: torch.Tensor = torch.tensor(Y, dtype=torch.float64, device=device)
+    if We is None:
+        We = torch.randn(n, X.shape[0], dtype=torch.float64, requires_grad=True, device=device)
+    else:
+        We = torch.tensor(We, dtype=torch.float64, requires_grad=True, device=device)
+    if Wd is None:
+        Wd = torch.randn(Y.shape[0], n, dtype=torch.float64, requires_grad=True, device=device)
+    else:
+        Wd = torch.tensor(Wd, dtype=torch.float64, requires_grad=True, device=device)
+
+    optimizer = torch.optim.Adam([We, Wd], lr=lr)
+
+    for i in range(max_iter):
+        optimizer.zero_grad()
+        loss = torch.norm(Y - Wd @ We @ X, p="fro")**2 + l * torch.sum(torch.norm(We, p=1, dim=1))
+        loss.backward()
+        if verbose:
+            print(f"Iteration {i + 1}, Loss: {loss.item()}")
+        optimizer.step()
+
+    return We.detach().cpu().numpy(), Wd.detach().cpu().numpy()
